@@ -1,4 +1,6 @@
 const { Wechaty } = require('wechaty')
+const md5 = require('md5')
+const fetch = require('node-fetch')
 
 const bot = Wechaty.instance()
 
@@ -13,23 +15,38 @@ bot.on('scan', (url, code) => {
 })
 
 .on('message', async msg => {
-    const contact = msg.from()
+    const contactFrom = msg.from()
     const content = msg.content()
     const room = msg.room()
-    const contactName = contact.name()
+    const contactNameFrom = contactFrom.name()
     
-    if(room) {
-        console.log(`Room: ${room.topic()} Contact: ${contactName} Content: ${content}`)
-    } else {
-        console.log(`Contact: ${contactName} Content: ${content}`)
+    // Do not logging any conversation from wechat offical.
+    if(contactFrom.official()) {
+        return
     }
 
-    if(msg.self()) {return}
+    // Logging the conversation.
+    if(room) {
+        console.log(`In [${room.topic()}] room, [${contactNameFrom}] says: ${content}`)
+    } else {
+        console.log(`[${contactNameFrom}] says: ${content}`)
+    }
 
-    if(contactName === '此间的少年') {
-        msg.say('你和自己说话呢？')
-    } else if (contactName === '木木') {
-        msg.say('老婆老婆么么哒。')
+    // Must not do any action if the message is from yourself.
+    if(msg.self()) {
+        return
+    }
+
+    // Handle the actions.
+    if(contactNameFrom === '木木' && !room) {
+        const apiUrl = 'http://www.tuling123.com/openapi/api'
+        const uid = md5(contactFrom.id)
+        const payload = `{"key": "4424be4bf32c45ad805812875dbc3f08", "info": "${content}", "userid": "${uid}"}`
+
+        console.log(payload)
+        let response = await fetch(apiUrl, {method: 'POST', body: payload})
+        let data = await response.json()
+        msg.say(data.text)
     }
 })
 
